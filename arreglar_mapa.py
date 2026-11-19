@@ -1,0 +1,232 @@
+import pandas as pd
+import numpy as np
+
+# Cargar tu CSV original, forzando la lectura correcta si hay tildes o caracteres raros
+file_path = "2026_Empresas_cluster_CUIT - Hoja 2.csv"
+try:
+    df = pd.read_csv(file_path)
+except:
+    df = pd.read_csv(file_path, sep=';', encoding='utf-8')
+
+# Limpieza para búsqueda
+df['Empresa_busqueda'] = df['Empresa'].astype(str).str.strip().str.upper()
+
+# DICCIONARIO COMPLETO Y REVISADO EMPRESA POR EMPRESA
+# Estas coordenadas apuntan EXACTAMENTE a los textos de tu columna "Direccion"
+correcciones = {
+    # --- CÓRDOBA BIM CLUSTER ---
+    'DEPRO': (-31.2982, -64.2885),
+    'GRUPO DAQ': (-31.4202, -64.4935),
+    'GRUPO EDISUR': (-31.4613, -64.2331),
+    'INCOA': (-31.3697, -64.2372),
+    'ZAP ARQUITECTOS': (-31.3671, -64.2255),
+    'VERY VISUAL': (-31.4286, -64.1847),
+    'PIENO': (-32.4086, -63.2509),
+    'ESTUDIO LARSSON': (-31.3712, -64.2690),
+    'BTB': (-31.4431, -64.1824),
+    'INGENIA': (-31.3943, -64.1897),
+    'INGENERA': (-33.1203, -64.3533),
+    'EF1': (-31.4419, -64.2057),
+    'ANDES DEAN': (-31.4115, -64.1990),
+    'DEKALYSEIS': (-31.4138, -64.1950),
+    'INGENIERIA ELECTRICA SA': (-33.1138, -64.3760),
+    'NMASUNO INGENIERIA SA': (-31.4172, -64.1889),
+    'AUGUSTINOY & AUGUSTINOY': (-31.4395, -64.2118),
+    'TECNOFUNDACIONES': (-31.4363, -64.1688),
+    'VISUALPEEPHOLE': (-31.3747, -64.2407),
+    'YOUBIM LLC': (-31.4150, -64.1670),
+    'TEKNIK': (-31.3255, -64.2251),
+    'EPEC': (-31.4075, -64.1855),
+    'ICON-INGENIERIA Y CONSTRUCCIONES SA': (-31.4245, -64.1489),
+    'ITECH': (-31.3695, -64.2403),
+    'REPÚBLICA VIAJES': (-31.2982, -64.2885),
+
+    # --- CLUSTER FINTECH ---
+    'FOCUS INVESTMENT MANAGEMENT': (-31.4177, -64.1812),
+    'QUANTEX': (-31.4286, -64.1847),
+    'INVERA': (-31.4211, -64.1874),
+    'PAGOS 360': (-31.4124, -64.1895),
+    'PAYFUN': (-31.3748, -64.2277),
+    'RED UNISOL': (-31.4121, -64.1888),
+    'SISCARD SA': (-31.4135, -64.1888),
+    'TELEPROM': (-31.3780, -64.2140),
+    'TRINWORK SAS (VORTEX)': (-31.3963, -64.1802),
+    'DARWOFT SA': (-31.3970, -64.1868),
+    'SYS GLOBAL PAY': (-31.3534, -64.3215),
+
+    # --- BPO & KPO ---
+    'EVOLTIS': (-31.4179, -64.1924),
+    'KONECTA': (-31.4150, -64.1825),
+    'TELEMERCADO': (-31.4121, -64.1888),
+    'GRUPO VN GLOBAL': (-31.4175, -64.1810),
+    'VOICENTER': (-31.4075, -64.1925),
+    'APEX': (-31.4170, -64.1804),
+    'MULTICONEX': (-31.3855, -64.2255),
+    'GENERALL COLLECT': (-31.4155, -64.1830),
+
+    # --- CLIC (LOCALIZACIÓN) ---
+    'DELSURTRANSLATIONS': (-31.4124, -64.1895),
+    'PROGROUP': (-31.4181, -64.1937),
+    'LANGUAGE SOLUTIONS TEAM': (-31.4150, -64.1920),
+    'TBO': (-31.3722, -64.2378),
+    'BAQUERO TRANSLATIONS': (-31.4395, -64.1952),
+    'STILLMAN TRANSLATIONS': (-31.4245, -64.1860),
+    'THE TYPESETTER': (-31.3700, -64.2100),
+    'SHARPLINE': (-31.4218, -64.1868),
+
+    # --- TURISMO SALUD ---
+    'HOSPITAL PRIVADO UNIVERSITARIO DE CORDOBA': (-31.4418, -64.1932),
+    'SANATORIO ALLENDE': (-31.4233, -64.1833), # Se usa la misma para ambos sedes según tu archivo (Obispo Oro / Yrigoyen)
+    'INSTITUTO OULTON': (-31.4215, -64.1882),
+    'CLINICA DE OJOS CORDOBA': (-31.4325, -64.1812),
+    'CLINICA DIQUECITO': (-31.3524, -64.3312),
+    'CENTRO DE RADIOTERAPIA DEAN FUNES': (-31.4082, -64.2154),
+    'VITTAL': (-31.3672, -64.2389),
+    'POSADA DEL QUENTI': (-31.4650, -64.5667),
+    'CLINICA UNIVERSITARIA REINA FABIOLA': (-31.4124, -64.1685),
+    'HOTEL Y111': (-31.4208, -64.1870),
+    'WINDSOR HOTEL & TOWER': (-31.4172, -64.1802),
+
+    # --- INVESTIGACIÓN SALUD ---
+    'BRCR GLOBAL': (-31.4580, -64.1925),
+    'CAISAL': (-31.3280, -64.2051),
+    'CEMAIC': (-31.3650, -64.2052),
+    'CENTRO PRIVADO DEAN FUNES Y ASOC DE ONCOLOGIA': (-31.4082, -64.2154),
+    'CEPROCOR': (-31.4172, -64.1625),
+    'CLINICA UNIV. REINA FABIOLA': (-31.4124, -64.1685),
+    'CLINICA VELEZ SARFIELD': (-31.4285, -64.1952),
+    'CONCI-CARPINELLA': (-31.4085, -64.2120),
+    'DASPU': (-31.4395, -64.1902),
+    'FUNDACION LENOXX': (-31.4120, -64.1905),
+    'HOSPITAL CORDOBA': (-31.4105, -64.1592),
+    'HOSPITAL ITALIANO': (-31.4120, -64.1610),
+    'INBIOMED': (-31.4285, -64.2385),
+    'INTS. ONCOLOGICO CORDOBA': (-31.3985, -64.2154),
+    'INSTITUTO MEDICO DAMIC - FUNDACION RUSCULLEDA': (-31.4085, -64.2051),
+    'INSTITUTO STRUSBERG': (-31.4150, -64.1812),
+    'LABORATORIO DE HEMODERIVADOS UNC': (-31.4485, -64.1912),
+    'LABORATORIO LUAR': (-31.3280, -64.2051),
+    'LEISTUNG': (-31.3325, -64.2485),
+    'ONCOPRECISION': (-34.6017, -58.3719), # CABA
+    'PROMEDON': (-31.4850, -64.1251),
+    'RAOMED S.A.': (-31.4385, -64.2351),
+    'SHARPLINE LIFE SCIENCES': (-31.4218, -64.1868),
+    'SICC': (-31.4285, -64.1912),
+    'TERRAQUEO SMO': (-31.3452, -64.2585),
+    'UNC BIOINGENIERIA': (-31.4215, -64.1882),
+    'UNIVERSIDAD SIGLO XXI': (-31.4225, -64.1825),
+    'SANATORIO DE LA CAÑADA': (-31.4215, -64.1951),
+    'FUNEYT': (-31.4452, -64.1915),
+
+    # --- CÓRDOBA CREATIVA ---
+    'HELLOBRAND': (-31.3524, -64.2486),
+    'ROMERO VICTORICA': (-31.3862, -64.2185),
+    'GARRAZA + PINUS': (-31.3721, -64.2405),
+    'MARCAS CROWDBRANDING': (-31.3712, -64.2355),
+    'WOBRA AGENCIA': (-31.4211, -64.1874),
+    'IRRACIONAL': (-31.3654, -64.2238),
+    '25 WATTS': (-31.3862, -64.2185),
+
+    # --- CÓRDOBA WELCOME ---
+    '360 REGIONAL TOUR OPERATOR': (-31.4175, -64.1903),
+    'NATIVO VIAJES (DMC también)': (-31.4179, -64.1850),
+    'HOLIDAY INN': (-31.3551, -64.1965),
+    'QUINTO CENTENARIO HOTEL': (-31.4135, -64.1952),
+    'HOWARD JOHNSON HOTEL & SUITES LA CAÑADA': (-31.4135, -64.1912),
+    'QUORUM CORDOBA HOTEL': (-31.3287, -64.2185),
+    'Y111 HOTEL': (-31.4218, -64.1877),
+    'JOINT GROUP': (-31.3780, -64.2340),
+    'FREGUGLIA CARPAS S.A.': (-31.3210, -64.1985),
+    'MB EQUIPAMIENTOS': (-31.1712, -64.3225),
+    'BINIVISION': (-31.3912, -64.1818),
+    'EN VIVO PRODUCCIONES': (-31.4087, -64.1865),
+    'UNIVERSO JIMENEZ PRODUCCIONES - INTEGRAL': (-31.3604, -64.2386),
+    'PRODAR SRL': (-31.3854, -64.2235),
+    'DAHAUSS': (-31.3956, -64.1611),
+    'NO ME GRITES PRODUCCIONES': (-31.2654, -64.3012),
+    'U51NA GROUP': (-31.3650, -64.2390),
+    'CLUB ATLÉTICO TALLERES': (-31.4173, -64.1834),
+    'CLUB ATLÉTICO BELGRANO': (-31.4035, -64.2058),
+    'CLUB INSTITUTO ATLÉTICO CENTRAL CÓRDOBA': (-31.3845, -64.1802),
+    'CLUB ATLÉTICO RACING': (-31.3934, -64.1505),
+    'AUTOENTRADA': (-31.4087, -64.1991),
+    'EDEN ENTRADAS': (-31.4172, -64.1868),
+    'AL POGO': (-31.4140, -64.1950),
+    'DISTRITO CAPITALINAS CORDOBA': (-31.4124, -64.1895),
+    'FORJA ARENA': (-31.3956, -64.1611),
+    'FONOBUS': (-31.4170, -64.1750),
+    'PERSUASIVA AGENCIA': (-31.4178, -64.1912),
+    'SAN HONORATO': (-31.4162, -64.1722),
+    'WILOW CATERING': (-31.3725, -64.2155),
+    'SCARLET CATERING & EVENTOS': (-31.3752, -64.2291),
+    'INSTITUTO CULTURA CONTEMPORANEA': (-31.4011, -64.1852),
+    'LA FÁBRICA CALERA': (-31.3411, -64.3168),
+    'HOWARD JOHNSON CARLOS PAZ': (-31.4316, -64.4925),
+    'LA ESTACIÓN': (-31.3458, -64.4533),
+    'ORFEO SUITES': (-31.3671, -64.2255),
+    'SETUR VIAJES Y TURISMO': (-31.3575, -64.2442),
+    'IKI GROUP': (-31.4338, -64.5112),
+
+    # --- FRANQUICIAS ---
+    'AGROPISCINAS': (-31.2985, -64.2965),
+    'BULLANGA MILANGA': (-31.4243, -64.1868),
+    'CASERATTO': (-31.4239, -64.1912),
+    'CUSTORE': (-31.4087, -64.1952),
+    'ECOKIL': (-31.3289, -64.2185),
+    'GAMBA MEDIA': (-31.4138, -64.1889),
+    'GLUP´S': (-31.3098, -64.1611),
+    'GRANDIET': (-31.4201, -64.1823),
+    'GRIDO': (-31.4682, -64.1154),
+    'INFONEGOCIOS': (-31.3654, -64.2238),
+    'JUNIOR B': (-31.4335, -64.5021),
+    'LA COMANDA': (-31.4195, -64.1895),
+    'LA QUINTA': (-31.3735, -64.4920),
+    'LAPANAGASTRO S.A': (-31.4158, -64.1812),
+    'LOMITOS EL CANDIL': (-31.3725, -64.2612),
+    'LOZADA VIAJES': (-31.4021, -64.1856),
+    'MAJA MORENA': (-31.4305, -64.5100),
+    'PAN PLANO': (-31.3910, -64.2272),
+    'PANADERIA DEL PILAR': (-31.4012, -64.2198),
+    'PEÑON DEL AGUILA': (-31.4421, -64.3541),
+    'PEPECITO': (-31.3615, -64.2498),
+    'PORTO GELATO': (-33.1256, -64.3512),
+    'REINA ALBA': (-31.3915, -64.1811),
+    'SILENZIO': (-31.4189, -64.1834),
+    'SUSHI 2x1': (-31.4280, -64.1802),
+    'SUSHI SOUL': (-31.3854, -64.2215),
+    'SUSHI WORLD': (-31.4140, -64.2370),
+    'VIA VERDE': (-31.3854, -64.2215),
+    'WOLLEN': (-31.3620, -64.2490),
+    '384 GROUP': (-31.3811, -64.2654),
+    'CENTROFRANCHISING': (-31.3654, -64.2385),
+    'CCLA CENTRO COMERCIAL LATAM': (-31.3712, -64.2355),
+    'DUTY GESTION': (-31.4621, -64.1952),
+    'EGUIA & ASOCIADOS': (-31.3755, -64.2312),
+    'GETT': (-31.3512, -64.2541),
+    'IMAGINAREA': (-31.3789, -64.2322),
+    'MKT FRANQUICIAS': (-31.3514, -64.3211),
+    'MRV CONSULTORA': (-31.3766, -64.2345),
+    'PEOPLE & FRANQ': (-31.4233, -64.1844),
+    'PRISMA PROPIEDADES': (-31.4221, -64.1866),
+    'SUPERVIELLE': (-31.4165, -64.1848),
+    'IDESA': (-31.4121, -64.1872),
+    'UNIVERSIDAD BLAS PASCAL': (-31.3283, -64.2185),
+    'UNIVERSIDAD SIGLO 21': (-31.4225, -64.1852)
+}
+
+# Reiniciar las columnas Lat y Log para evitar cualquier valor viejo
+df['Lat'] = np.nan
+df['Log'] = np.nan
+
+# Aplicar las coordenadas correctas
+for emp, (lat, lon) in correcciones.items():
+    mask = df['Empresa_busqueda'] == emp.upper()
+    df.loc[mask, 'Lat'] = lat
+    df.loc[mask, 'Log'] = lon
+
+# Borrar la columna auxiliar
+df = df.drop(columns=['Empresa_busqueda'])
+
+# Guardar en Excel
+df.to_excel("2026_Empresas_cluster_CUIT_Final.xlsx", index=False)
+print("¡Archivo arreglado y guardado como 2026_Empresas_cluster_CUIT_Final.xlsx!")
